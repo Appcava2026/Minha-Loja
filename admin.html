@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Painel da loja</title>
+<style>
+*{box-sizing:border-box;margin:0}
+body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#f1f3f2;color:#1c2321;line-height:1.45}
+button,input,select{font:inherit}
+button{cursor:pointer;border:1px solid #c9d1cd;background:#fff;padding:8px 14px;border-radius:6px}
+button:hover{background:#eef2f0}
+button.p{background:#14683f;border-color:#14683f;color:#fff;font-weight:600}
+button.p:hover{background:#0f5733}button:disabled{opacity:.5;cursor:default}
+button.perigo{color:#b3261e}
+:focus-visible{outline:3px solid #1a8a52;outline-offset:2px}
+#login{min-height:100vh;display:grid;place-content:center}
+#login form{background:#fff;padding:30px;border-radius:12px;display:grid;gap:12px;width:min(340px,92vw)}
+#login input,.cp input,.cp select{padding:9px 10px;border:1px solid #c9d1cd;border-radius:6px;width:100%}
+#erro{color:#b3261e;font-size:.9rem}
+header{background:#fff;display:flex;align-items:center;gap:16px;padding:12px 4%;position:sticky;top:0;z-index:5;box-shadow:0 1px 0 #dde3e0}
+header b{font-size:1.1rem;margin-right:auto}
+header a{color:#14683f}
+#status{font-size:.9rem;color:#6b7772}
+nav{display:flex;gap:6px;padding:12px 4% 0;overflow-x:auto}
+nav button{border-radius:6px 6px 0 0;border-bottom:0;white-space:nowrap}
+nav button.on{background:#14683f;color:#fff;border-color:#14683f}
+main{background:#fff;margin:0 4% 40px;padding:22px;border-radius:0 8px 8px 8px;min-height:50vh}
+main h2{font-size:1.3rem;margin-bottom:4px}
+main p.d{color:#6b7772;margin-bottom:14px;font-size:.92rem}
+.topo{display:grid;gap:10px;margin-bottom:16px;justify-items:start}
+.row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #e7ebe9}
+.th{width:48px;height:48px;border-radius:8px;flex:none;background-size:cover;background-position:center;background-color:#ddd}
+.tx{flex:1;min-width:0}.tx small{display:block;color:#6b7772}
+.bt{display:flex;gap:6px;flex-wrap:wrap}
+.bt button{padding:6px 10px}
+.vazio{color:#6b7772;padding:20px 0}
+.cp{display:grid;gap:4px;margin-bottom:12px;max-width:420px}
+.cp span{font-size:.9rem;font-weight:600}
+.cp input[type=color]{padding:2px;height:40px}
+.ck{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+.pv{max-width:120px;border-radius:8px;margin-top:4px}
+dialog{border:0;border-radius:12px;padding:22px;width:min(460px,94vw);max-height:92vh;overflow:auto}
+dialog::backdrop{background:#0006}
+dialog h3{margin-bottom:14px}
+.acoes{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
+.temas{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;margin-top:6px}
+.tema{text-align:left;padding:14px;border-width:2px}
+.tema.on{border-color:#14683f;box-shadow:0 0 0 3px #14683f33}
+.tema i{display:inline-block;width:28px;height:28px;border-radius:50%;margin-right:6px;border:1px solid #0003}
+.tema b{display:block;margin-top:8px}.tema small{color:#6b7772}
+hr{border:0;border-top:1px solid #e7ebe9;margin:20px 0}
+a.lk{padding:6px 10px;border:1px solid #c9d1cd;border-radius:6px;text-decoration:none;color:inherit;background:#fff;text-align:center}
+input,select{font-size:16px}
+@media(max-width:700px){header{flex-wrap:wrap;gap:8px;padding:10px 4%}header b{flex-basis:100%}main{margin:0 2% 30px;padding:14px}.row{flex-wrap:wrap}.bt{width:100%}.bt button,.bt a{flex:1}dialog{padding:16px}.temas{grid-template-columns:1fr 1fr}button{min-height:40px}}
+</style>
+</head>
+<body>
+<div id="login"><form id="fl"><h1 style="font-size:1.3rem">Painel da loja</h1>
+  <input type="password" id="senha" placeholder="Senha do painel" autocomplete="current-password" aria-label="Senha">
+  <button class="p">Entrar</button><p id="erro"></p></form></div>
+<div id="app" hidden>
+  <header><b>Painel da loja</b><span id="status"></span><a href="/" target="_blank">Ver loja</a><button class="p" id="salvar" disabled>Salvar alterações</button></header>
+  <nav id="abas"></nav><main id="tela"></main>
+</div>
+<dialog id="dlg"></dialog>
+<script>
+const $=id=>document.getElementById(id),brl=n=>Number(n).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ABAS=[['categorias','Categorias'],['carrossel','Carrossel'],['promo','Promoção temporária'],['s1','Seção 1 de produtos'],['s2','Seção 2 de produtos'],['cores','Loja e cores'],['pedidos','Pedidos']];
+const TEMAS=[['verde','Verde','Tema atual','#0f3d2e','#1a8a52','#e6f4c8'],['preto','Preto','Black Friday','#000','#d99a00','#f5b800'],['vermelho','Vermelho','Natal','#7a0c14','#d01e27','#f5d9a0'],['amarelo','Amarelo','Queima de estoque','#ffd400','#e11d1d','#111']];
+let CFG,aba='categorias',senha=sessionStorage.getItem('senha')||'',dirty=false;
+
+async function api(url,o={}){
+  const r=await fetch(url,{...o,headers:{'content-type':'application/json','x-admin-senha':senha,...(o.headers||{})}});
+  const d=await r.json().catch(()=>({}));
+  if(r.status===401){sair();throw new Error('Senha incorreta')}
+  if(!r.ok)throw new Error(d.erro||'Erro inesperado');return d;
+}
+function sair(){senha='';sessionStorage.removeItem('senha');$('app').hidden=true;$('login').hidden=false}
+async function entrar(){
+  try{await api('/api/loja?check=1');CFG=await api('/api/loja');
+    CFG.secao1||={titulo:'Seção 1',ativa:true};CFG.secao2||={titulo:'Seção 2',ativa:true};CFG.promo||={ativa:false,nome:'Promoção',desconto:10,inicio:new Date().toISOString(),fim:new Date(Date.now()+7*864e5).toISOString()};CFG.loja||={nome:'MINHA LOJA'};CFG.tema||='verde';
+    sessionStorage.setItem('senha',senha);$('login').hidden=true;$('app').hidden=false;render()}
+  catch(e){$('erro').textContent=e.message}
+}
+$('fl').onsubmit=e=>{e.preventDefault();senha=$('senha').value;entrar()};
+if(senha)entrar();
+
+const sujo=()=>{dirty=true;$('salvar').disabled=false;$('status').textContent='Alterações não salvas'};
+$('salvar').onclick=async()=>{$('salvar').disabled=true;$('status').textContent='Salvando…';
+  try{await api('/api/loja',{method:'PUT',body:JSON.stringify(CFG)});dirty=false;$('status').textContent='Salvo. A loja já está atualizada.'}
+  catch(e){alert(e.message);$('salvar').disabled=false;$('status').textContent='Erro ao salvar'}};
+onbeforeunload=e=>{if(dirty){e.preventDefault();e.returnValue=''}};
+
+/* ---------- componentes ---------- */
+const bg=o=>o.foto?`background-image:url('${esc(o.foto)}')`:`background-color:${esc(o.cor||'#ddd')}`;
+function lista(el,arr,info,editar,{filtro=()=>true}={}){
+  el.innerHTML=arr.map((it,i)=>filtro(it)?`<div class="row"><div class="th" style="${bg(it)}"></div><div class="tx"><b>${esc(info(it).t)}</b><small>${esc(info(it).s)}</small></div>
+   <div class="bt"><button data-a="up" data-i="${i}" aria-label="Subir">↑</button><button data-a="dn" data-i="${i}" aria-label="Descer">↓</button><button data-a="ed" data-i="${i}">Editar</button><button class="perigo" data-a="del" data-i="${i}">Excluir</button></div></div>`:'').join('')||'<p class="vazio">Nada por aqui ainda.</p>';
+  el.onclick=e=>{const b=e.target.closest('button');if(!b)return;const i=+b.dataset.i,a=b.dataset.a;
+    if(a==='ed')editar(arr[i]);
+    else if(a==='del'){if(confirm('Excluir "'+info(arr[i]).t+'"?')){arr.splice(i,1);sujo();render()}}
+    else{let j=i;do{j+=a==='up'?-1:1}while(arr[j]&&!filtro(arr[j]));if(arr[j]){[arr[i],arr[j]]=[arr[j],arr[i]];sujo();render()}}};
+}
+function campo(c,v){
+  const val=v[c.k]??c.def??'';
+  if(c.t==='check')return `<label class="ck"><input type="checkbox" name="${c.k}" ${val?'checked':''}> ${c.l}</label>`;
+  let i;
+  if(c.t==='select')i=`<select name="${c.k}">${c.o.map(([a,b])=>`<option value="${esc(a)}" ${String(a)===String(val)?'selected':''}>${esc(b)}</option>`).join('')}</select>`;
+  else if(c.t==='img')i=`<input name="${c.k}" value="${esc(val)}" placeholder="Cole um link ou envie uma foto"><input type="file" accept="image/*" data-up="${c.k}"><img class="pv" alt="" ${val?`src="${esc(val)}"`:'hidden'}>`;
+  else i=`<input name="${c.k}" type="${c.t||'text'}" ${c.t==='number'?'step="0.01" min="0"':''} value="${esc(val)}">`;
+  return `<label class="cp"><span>${c.l}</span>${i}</label>`;
+}
+async function reduzir(f,max=700){const im=await createImageBitmap(f),k=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);return c.toDataURL('image/jpeg',.8)}
+function form(titulo,campos,v,ok){
+  const d=$('dlg');d.innerHTML=`<form id="ff"><h3>${titulo}</h3>${campos.map(c=>campo(c,v)).join('')}<div class="acoes"><button type="button" id="cx">Cancelar</button><button class="p">Salvar</button></div></form>`;
+  d.querySelectorAll('[data-up]').forEach(f=>f.onchange=async()=>{if(!f.files[0])return;f.disabled=true;
+    try{const r=await api('/api/imagem',{method:'POST',body:JSON.stringify({dataUrl:await reduzir(f.files[0])})});d.querySelector(`[name=${f.dataset.up}]`).value=r.url;const pv=f.nextElementSibling;pv.src=r.url;pv.hidden=false}
+    catch(e){alert(e.message)}f.disabled=false});
+  $('cx').onclick=()=>d.close();
+  $('ff').onsubmit=e=>{e.preventDefault();const o={};
+    for(const c of campos){const el=$('ff').elements[c.k];o[c.k]=c.t==='check'?el.checked:c.t==='number'?(parseFloat(el.value)||0):el.value.trim()}
+    const falta=campos.find(c=>c.req&&!o[c.k]);if(falta){alert('Preencha: '+falta.l);return}
+    ok(o);d.close();sujo();render()};
+  d.showModal();
+}
+const novoId=()=>'x'+Date.now().toString(36);
+function abrir(arr,campos,titulo,item,base={},fx=o=>o){
+  form(titulo,campos,item||base,o=>{o=fx(o);item?Object.assign(item,o):arr.push({id:novoId(),...o})});
+}
+
+/* ---------- abas ---------- */
+const CAT=[{k:'nome',l:'Nome',req:1},{k:'foto',l:'Foto (opcional)',t:'img'},{k:'cor',l:'Cor (usada quando não há foto)',t:'color',def:'#14683f'}];
+const SLIDE=[{k:'sub',l:'Texto pequeno (acima)'},{k:'titulo',l:'Título grande',req:1},{k:'texto',l:'Frase'},{k:'botao',l:'Texto do botão'},{k:'foto',l:'Imagem de fundo (opcional)',t:'img'},{k:'ativo',l:'Mostrar no carrossel',t:'check',def:true}];
+const prodCampos=()=>[{k:'nome',l:'Nome do produto',req:1},{k:'preco',l:'Preço (R$)',t:'number'},
+  {k:'cat',l:'Categoria',t:'select',o:[['','Sem categoria'],...CFG.categorias.map(c=>[c.id,c.nome])]},
+  {k:'secao',l:'Em qual seção aparece',t:'select',o:[[1,'Seção 1: '+CFG.secao1.titulo],[2,'Seção 2: '+CFG.secao2.titulo]]},
+  {k:'foto',l:'Foto',t:'img'},{k:'promo',l:'Participa da promoção temporária',t:'check',def:true},{k:'ativo',l:'Visível na loja',t:'check',def:true}];
+const catNome=id=>(CFG.categorias.find(c=>c.id===id)||{nome:'Sem categoria'}).nome;
+
+function render(){
+  $('abas').innerHTML=ABAS.map(([k,n])=>`<button data-k="${k}" class="${k===aba?'on':''}">${n}</button>`).join('');
+  $('abas').onclick=e=>{const b=e.target.closest('button');if(b){aba=b.dataset.k;render()}};
+  const T=$('tela');
+  if(aba==='categorias'){
+    T.innerHTML=`<div class="topo"><h2>Categorias</h2><p class="d">Aparecem no menu, na fileira de círculos e nos atalhos ao lado do carrossel (as 6 primeiras). Use as setas para mudar a ordem.</p><button class="p" id="novo">+ Nova categoria</button></div><div id="ls"></div>`;
+    $('novo').onclick=()=>abrir(CFG.categorias,CAT,'Nova categoria');
+    lista($('ls'),CFG.categorias,c=>({t:c.nome,s:CFG.produtos.filter(p=>p.cat===c.id).length+' produto(s)'}),c=>abrir(CFG.categorias,CAT,'Editar categoria',c));
+  }else if(aba==='carrossel'){
+    T.innerHTML=`<div class="topo"><h2>Carrossel</h2><p class="d">Banners grandes que giram no topo da loja.</p><button class="p" id="novo">+ Novo banner</button></div><div id="ls"></div>`;
+    $('novo').onclick=()=>abrir(CFG.carrossel,SLIDE,'Novo banner');
+    lista($('ls'),CFG.carrossel,s=>({t:s.titulo,s:(s.ativo===false?'Oculto · ':'')+(s.sub||'')}),s=>abrir(CFG.carrossel,SLIDE,'Editar banner',s));
+  }else if(aba==='pedidos'){
+    T.innerHTML=`<h2>Pedidos</h2><p class="d">Os 50 pedidos mais recentes. "Pago" aparece quando o Mercado Pago confirma o pagamento.</p><div id="ls"><p class="vazio">Carregando…</p></div>`;
+    api('/api/pedidos').then(ps=>{if(aba!=='pedidos')return;
+      const st={pago:'Pago',aguardando:'Aguardando pagamento',pendente:'Pagamento pendente',recusado:'Recusado'};
+      $('ls').innerHTML=ps.filter(Boolean).map(o=>`<div class="row"><div class="tx"><b>#${esc(o.numero)} · ${brl(o.total)} · ${st[o.status]||esc(o.status)}</b>
+       <small>${new Date(o.criado).toLocaleString('pt-BR')} · ${esc(o.cliente.nome)}</small><small>${o.itens.map(i=>esc(i.qtd+'x '+i.nome)).join(', ')}</small></div>
+       <div class="bt"><a class="lk" target="_blank" rel="noopener" href="https://wa.me/${o.cliente.tel.length<=11?'55':''}${esc(o.cliente.tel)}">WhatsApp do cliente</a></div></div>`).join('')||'<p class="vazio">Nenhum pedido ainda.</p>'})
+     .catch(e=>{if($('ls'))$('ls').innerHTML='<p class="vazio">'+esc(e.message)+'</p>'});
+  }else if(aba==='promo'){
+    const P=CFG.promo,p2=n=>String(n).padStart(2,'0');
+    const loc=iso=>{const d=new Date(iso);return isNaN(d)?'':`${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}T${p2(d.getHours())}:${p2(d.getMinutes())}`};
+    T.innerHTML=`<h2>Promoção temporária</h2><p class="d">Liga o banner com cronômetro e o desconto nos produtos. Na data final ela some sozinha e os preços voltam ao normal, sem você precisar fazer nada.</p>
+     <label class="ck"><input type="checkbox" id="pa" ${P.ativa?'checked':''}> Promoção ligada</label>
+     <label class="cp"><span>Nome da promoção</span><input id="pn" value="${esc(P.nome)}"></label>
+     <label class="cp"><span>Desconto (%)</span><input id="pd" type="number" min="1" max="90" value="${P.desconto}"></label>
+     <label class="cp"><span>Começa em</span><input id="pi" type="datetime-local" value="${loc(P.inicio)}"></label>
+     <label class="cp"><span>Termina em</span><input id="pf" type="datetime-local" value="${loc(P.fim)}"></label><p id="pst" class="d"></p>`;
+    const st=()=>{const a=Date.now(),i=new Date(P.inicio),f=new Date(P.fim);$('pst').textContent=!P.ativa?'Desligada.':a<i?'Ainda não começou.':a>=f?'Já terminou. Defina novas datas para reativar.':'No ar agora.'};
+    const ler=()=>{P.ativa=$('pa').checked;P.nome=$('pn').value;P.desconto=Math.min(90,Math.max(1,+$('pd').value||1));if($('pi').value)P.inicio=new Date($('pi').value).toISOString();if($('pf').value)P.fim=new Date($('pf').value).toISOString();sujo();st()};
+    ['pa','pn','pd','pi','pf'].forEach(i=>$(i).oninput=ler);st();
+  }else if(aba==='s1'||aba==='s2'){
+    const n=aba==='s1'?1:2,S=CFG['secao'+n];
+    T.innerHTML=`<div class="topo"><h2>Seção ${n} de produtos</h2><label class="cp"><span>Título da seção no site</span><input id="st" value="${esc(S.titulo)}"></label>
+     <label class="ck"><input type="checkbox" id="sa" ${S.ativa!==false?'checked':''}> Mostrar esta seção na loja</label><button class="p" id="novo">+ Novo produto</button></div><div id="ls"></div>`;
+    $('st').oninput=()=>{S.titulo=$('st').value;sujo()};$('sa').onchange=()=>{S.ativa=$('sa').checked;sujo()};
+    const fx=o=>({...o,secao:+o.secao});
+    $('novo').onclick=()=>abrir(CFG.produtos,prodCampos(),'Novo produto',null,{secao:n},fx);
+    lista($('ls'),CFG.produtos,p=>({t:p.nome,s:brl(p.preco)+' · '+catNome(p.cat)+(p.ativo===false?' · oculto':'')}),p=>abrir(CFG.produtos,prodCampos(),'Editar produto',p,{},fx),{filtro:p=>+p.secao===n});
+  }else{
+    T.innerHTML=`<h2>Cores da loja</h2><p class="d">Escolha o tema. Vale para o site inteiro (cabeçalho, banners, botões e promoção) depois de salvar.</p>
+     <label class="cp"><span>Nome da loja</span><input id="nl" value="${esc(CFG.loja.nome)}"></label>
+     <label class="cp"><span>WhatsApp da loja (com DDD)</span><input id="wl" inputmode="tel" placeholder="61999998888" value="${esc(CFG.loja.whatsapp||'')}"></label>
+     <p class="d">Recebe os avisos de pedido e é o número dos botões de WhatsApp da loja. Salvo com o 55 na frente.</p>
+     <button id="wt">Enviar mensagem de teste</button><hr>
+     <div class="temas">${TEMAS.map(t=>`<button class="tema ${CFG.tema===t[0]?'on':''}" data-t="${t[0]}"><i style="background:${t[3]}"></i><i style="background:${t[4]}"></i><i style="background:${t[5]}"></i><b>${t[1]}</b><small>${t[2]}</small></button>`).join('')}</div>`;
+    $('nl').oninput=()=>{CFG.loja.nome=$('nl').value;sujo()};
+    $('wl').onchange=()=>{let d=$('wl').value.replace(/\D/g,'');if(d.length>=10&&d.length<=11)d='55'+d;CFG.loja.whatsapp=d;$('wl').value=d;sujo()};
+    $('wt').onclick=async()=>{if(dirty){alert('Salve as alterações antes de testar.');return}$('wt').disabled=true;
+      try{await api('/api/loja?teste=1',{method:'POST'});alert('Mensagem de teste enviada. Confira seu WhatsApp.')}catch(e){alert('Não foi possível enviar: '+e.message)}$('wt').disabled=false};
+    document.querySelector('.temas').onclick=e=>{const b=e.target.closest('[data-t]');if(b){CFG.tema=b.dataset.t;sujo();render()}};
+  }
+}
+</script>
+</body>
+</html>
